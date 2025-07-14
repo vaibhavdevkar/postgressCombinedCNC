@@ -23,6 +23,7 @@ const monitoringRoutes = require('./routes/monitoringRoutes');
 const maintenanceRoutes = require('./routes/maintenanceRoutes');
 const breakdownRoutes = require('./routes/breakdownRoutes');
 const downtimeRoutes = require('./routes/downtimeRoutes');
+
 app.use('/api/downtimes', downtimeRoutes);
 const partRejectionRoutes = require('./routes/partrejectionRoutes');
 app.use('/api/partrejections', partRejectionRoutes);

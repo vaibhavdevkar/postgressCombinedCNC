@@ -117,7 +117,6 @@ exports.getAllMachineIds = async (req, res) => {
 // Get all machines by location ID
 exports.getMachinesByOrganization = async (req, res) => {
   const { organizationId } = req.params;
-
   try {
     const result = await pool.query('SELECT * FROM machine_master WHERE location = $1', [organizationId]);
     res.status(200).json(result.rows);
@@ -255,3 +254,54 @@ exports.getBottleneckMachineIds = async (req, res) => {
     res.status(500).json({ message: 'Error fetching bottleneck machines', details: error.message });
   }
 };
+
+
+
+exports.getAllMachine = async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM machine_master`
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching machines:', error);
+    return res
+      .status(500)
+      .json({
+        message: 'Error fetching machines',
+        details: error.message
+      });
+  }
+};
+
+
+exports.getMachinesByLine = async (req, res) => {
+  const rawLoc = req.query.location;
+  const location = parseInt(rawLoc, 10);
+
+  if (!rawLoc || isNaN(location)) {
+    return res
+      .status(400)
+      .json({ message: 'Invalid or missing query parameter: location' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `
+      SELECT *
+      FROM machine_master
+      WHERE location = $1
+      ORDER BY machine_id ASC
+      `,
+      [location]
+    );
+
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching machines by location:', error);
+    return res.status(500).json({
+      message: 'Error fetching machines by location',
+      details: error.message
+    });
+  }
+}
