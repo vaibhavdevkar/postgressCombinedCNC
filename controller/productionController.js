@@ -107,7 +107,125 @@ exports.getAllProductionData = async (req, res) => {
 
 
 
-// controllers/productionController.js
+// // controllers/productionController.js
+// exports.getLatestProductionByMachineType = async (req, res) => {
+//   try {
+//     // 1) find all distinct machine types for Active machines with Running plans
+//     const { rows: machines } = await pool.query(
+//       `
+//       SELECT DISTINCT mm.machine_name_type
+//         FROM public.planentry AS pe
+//         JOIN public.machine_master AS mm
+//           ON pe.machine_id = mm.machine_id
+//        WHERE mm.status = $1
+//          AND pe.status = $2
+//       `,
+//       ['Active', 'Running']
+//     );
+
+//     // 2) for each machineType, fetch only its latest production record
+//     const results = await Promise.all(
+//       machines.map(async ({ machine_name_type }) => {
+//         const tableName = `ORG001_${machine_name_type}_productionData`;
+
+//         const { rows } = await pool.query(
+//           `
+//           SELECT
+//             machine_id,
+//             machine_name_type,
+//             "EmpId",
+//             "createdAt",
+//             "TotalPartsProduced",
+//             shift_no,
+//             "actualCount_machine",
+//             plan_id
+//           FROM "${tableName}"
+//           ORDER BY "createdAt" DESC
+//           LIMIT 1
+//           `
+//         );
+
+//         if (!rows.length) return null;
+//         // return the raw row (keys identical to column names)
+//         return rows[0];
+//       })
+//     );
+
+//     // drop any nulls (in case a table had no rows)
+//     const latestByType = results.filter(r => r);
+
+//     return res.status(200).json(latestByType);
+//   } catch (error) {
+//     console.error('Error fetching latest production records:', error);
+//     return res.status(500).json({
+//       message: 'Error fetching latest production records',
+//       details: error.message
+//     });
+//   }
+// };
+
+
+// exports.getLatestProductionByMachineType = async (req, res) => {
+//   try {
+//     // 1) find all distinct machine types for Active machines with Running plans
+//     const { rows: machines } = await pool.query(
+//       `
+//       SELECT DISTINCT mm.machine_name_type
+//         FROM public.planentry AS pe
+//         JOIN public.machine_master AS mm
+//           ON pe.machine_id = mm.machine_id
+//        WHERE mm.status = $1
+//          AND pe.status = $2
+//       `,
+//       ['Active', 'Running']
+//     );
+
+//     // 2) for each machineType, fetch its latest production record + part_name
+//     const results = await Promise.all(
+//       machines.map(async ({ machine_name_type }) => {
+//         const tableName = `ORG001_${machine_name_type}_productionData`;
+
+//         const { rows } = await pool.query(
+//           `
+//           SELECT
+//             pd.machine_id,
+//             pd.machine_name_type,
+//             pd."EmpId",
+//             pd."createdAt",
+//             pd."TotalPartsProduced",
+//             pd.shift_no,
+//             pd."actualCount_machine",
+//             pd.plan_id,
+//             pe.part_name,
+//             pe.updated_at,
+//             pe.load_unload,
+//             pe.cycle_time
+//           FROM "${tableName}" AS pd
+//           LEFT JOIN public.planentry AS pe
+//             ON pd.plan_id = pe.plan_id
+//           ORDER BY pd."createdAt" DESC
+//           LIMIT 1
+//           `
+//         );
+
+//         // if table is empty, skip
+//         return rows[0] || null;
+//       })
+//     );
+
+//     // drop any nulls (in case some tables had no rows)
+//     const latestByType = results.filter(r => r);
+
+//     return res.status(200).json(latestByType);
+//   } catch (error) {
+//     console.error('Error fetching latest production records:', error);
+//     return res.status(500).json({
+//       message: 'Error fetching latest production records',
+//       details: error.message
+//     });
+//   }
+// };
+
 exports.getLatestProductionByMachineType = async (req, res) => {
   try {
     // 1) find all distinct machine types for Active machines with Running plans
@@ -123,7 +241,7 @@ exports.getLatestProductionByMachineType = async (req, res) => {
       ['Active', 'Running']
     );
 
-    // 2) for each machineType, fetch only its latest production record
+    // 2) for each machineType, fetch its latest production record + part_name + IST updated_at
     const results = await Promise.all(
       machines.map(async ({ machine_name_type }) => {
         const tableName = `ORG001_${machine_name_type}_productionData`;
@@ -131,29 +249,35 @@ exports.getLatestProductionByMachineType = async (req, res) => {
         const { rows } = await pool.query(
           `
           SELECT
-            machine_id,
-            machine_name_type,
-            "EmpId",
-            "createdAt",
-            "TotalPartsProduced",
-            shift_no,
-            "actualCount_machine",
-            plan_id
-          FROM "${tableName}"
-          ORDER BY "createdAt" DESC
+            pd.machine_id,
+            pd.machine_name_type,
+            pd."EmpId",
+            pd."createdAt",
+            pd."TotalPartsProduced",
+            pd.shift_no,
+            pd."actualCount_machine",
+            pd.plan_id,
+            pe.part_name,
+            -- formatted IST timestamp, no offset suffix
+            to_char(
+              pe.updated_at AT TIME ZONE 'Asia/Kolkata',
+              'YYYY-MM-DD"T"HH24:MI:SS.US'
+            ) AS updated_at,
+            pe.load_unload,
+            pe.cycle_time
+          FROM "${tableName}" AS pd
+          LEFT JOIN public.planentry AS pe
+            ON pd.plan_id = pe.plan_id
+          ORDER BY pd."createdAt" DESC
           LIMIT 1
           `
         );
 
-        if (!rows.length) return null;
-        // return the raw row (keys identical to column names)
-        return rows[0];
+        return rows[0] || null;
       })
     );
 
-    // drop any nulls (in case a table had no rows)
     const latestByType = results.filter(r => r);
-
     return res.status(200).json(latestByType);
   } catch (error) {
     console.error('Error fetching latest production records:', error);

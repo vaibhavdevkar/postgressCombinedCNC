@@ -3,7 +3,7 @@ const router = express.Router();
 const downtimeController = require('../controller/downtimeController');
 
 
-
+router.get('/downtime/:machine_id', downtimeController.getDowntimeByMachine);
 // READ ALL
 router.get('/', downtimeController.getAllDowntimes);
 

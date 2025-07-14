@@ -97,3 +97,54 @@ exports.deleteDowntime = async (req, res) => {
     res.status(500).json({ message: 'Error deleting downtime', error: error.message });
   }
 };
+
+
+
+exports.getDowntimeByMachine = async (req, res) => {
+  const rawId = req.params.machine_id;
+  const machineId = parseInt(rawId, 10);
+
+  if (isNaN(machineId)) {
+    return res
+      .status(400)
+      .json({ message: 'Invalid machine_id parameter' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `
+      SELECT
+        d.id,
+        d.machine_id,
+        d.shift_no,
+        d.start_timestamp,
+        d.end_timestamp,
+        d.downtime_reason,
+        d.duration,
+        d.status   AS downtime_status,
+        d.category,
+        d.linked,
+        d.remark,
+        d.date     AS downtime_date,
+        d.plan_id,
+        d.operator_id,
+        p.part_name,
+        p.status   AS plan_status
+      FROM public.downtime AS d
+      JOIN public.planentry AS p
+        ON d.plan_id = p.plan_id
+      WHERE p.status     = 'Running'
+        AND d.machine_id = $1
+      ORDER BY d.id ASC
+      `,
+      [machineId]
+    );
+
+    return res.status(200).json(rows);
+  } catch (err) {
+    console.error('Error fetching downtime records:', err);
+    return res
+      .status(500)
+      .json({ message: 'Error fetching downtime records', details: err.message });
+  }
+};
