@@ -45,9 +45,24 @@ app.use('/api/setup-approvals', setupApprovalRoutes);
 const skillMatrixRoutes = require("./routes/skillMatrixRoutes")
 app.use('/api/skills', skillMatrixRoutes);
 const toolRoutes = require("./routes/toolRoutes")
-app.use('/api/tools', toolRoutes);
+app.use('/api/tools/', toolRoutes);
 const userRoutes = require("./routes/userRoutes")
 app.use('/api/users', userRoutes);
+
+
+// const oeeRoutes = require('./routes/oeelogRoutes');
+// app.use('/api/save', oeeRoutes);
+// const { startGlobalOeePoller } = require('./controller/oeelogController')
+// startGlobalOeePoller()
+
+
+const planentryRoutes = require('./routes/planEntryRoutes');
+app.use('/api/planentries', planentryRoutes);
+
+
+const oeeLogRoutes = require('./routes/oeelogRoutes');
+app.use('/api/oee-logs', oeeLogRoutes);
+
 
 app.use('/api/breakdown', breakdownRoutes);
 app.use('/api/maintenance', maintenanceRoutes);

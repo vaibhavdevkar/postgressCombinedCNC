@@ -174,3 +174,39 @@ exports.deleteSetup = async (req, res) => {
     res.status(500).json({ message: 'Database error.' });
   }
 };
+
+
+
+exports.getSetupsByMachineAndPart = async (req, res) => {
+  const machineId = parseInt(req.params.machine_id, 10);
+  const partId    = parseInt(req.params.part_id, 10);
+
+  if (isNaN(machineId) || isNaN(partId)) {
+    return res
+      .status(400)
+      .json({ message: 'machine_id and part_id must both be integers.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT 
+         parameters,
+         specifications,
+         inspection_method,
+         quality_part_count,
+         production_part_count,
+         boolean_expected_value
+       FROM setup_master
+       WHERE machine_id = $1
+         AND part_id    = $2
+       ORDER BY step_no;`,
+      [machineId, partId]
+    );
+
+    // even if no rows, return empty array
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching setups by machine+part:', err);
+    res.status(500).json({ message: 'Database error.' });
+  }
+};

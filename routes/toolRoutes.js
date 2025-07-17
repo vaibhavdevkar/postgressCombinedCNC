@@ -23,11 +23,15 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 });
 const upload = multer({ storage });
 
+
+
 // CRUD routes with file-upload middleware on create/update
 router.get('/', toolController.getAllTools);
 router.get('/:id', toolController.getToolById);
 router.post('/', upload.single('tool_drawing_upload'), toolController.createTool);
 router.put('/:id', upload.single('tool_drawing_upload'), toolController.updateTool);
 router.delete('/:id', toolController.deleteTool);
+
+router.get('/getToolByMachine/:machine_id', toolController.getToolByMachineId);
 
 module.exports = router;

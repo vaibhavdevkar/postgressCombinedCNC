@@ -1,5 +1,6 @@
 // controller/maintenanceScheduleController.js
 const pool = require('../db');
+const moment = require('moment-timezone');
 
 exports.createMaintenanceSchedule = async (req, res) => {
   try {
@@ -87,5 +88,111 @@ exports.deleteMaintenanceSchedule = async (req, res) => {
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting schedule', error: error.message });
+  }
+};
+
+
+
+// exports.getDailySchedules = async (req, res) => {
+//   try {
+//     const { rows } = await pool.query(
+//       `SELECT *
+//          FROM public.maintenance_schedule
+//         WHERE lower(frequency) = $1
+//         ORDER BY maintenance_id ASC`,
+//       ['daily']
+//     );
+
+//     res.status(200).json(rows);
+//   } catch (error) {
+//     console.error('Error fetching daily maintenance schedules:', error);
+//     res.status(500).json({
+//       message: 'Error fetching daily maintenance schedules',
+//       error: error.message
+//     });
+//   }
+// };
+
+
+// const moment = require('moment-timezone');
+// const pool   = require('../db');
+
+exports.getDailySchedules = async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT *
+         FROM public.maintenance_schedule
+        WHERE lower(frequency) = $1
+        ORDER BY maintenance_id ASC`,
+      ['daily']
+    );
+
+    // convert only next_schedule_date into India Standard Time (UTC+5:30)
+    const converted = rows.map(row => ({
+      ...row,
+      next_schedule_date: moment
+        .utc(row.next_schedule_date)                  // treat DB value as UTC
+        .tz('Asia/Kolkata')                           // convert to IST
+        .format('YYYY-MM-DDTHH:mm:ss.SSSZ')           // e.g. "2025-07-17T00:00:00.000+05:30"
+    }));
+
+    res.status(200).json(converted);
+  } catch (error) {
+    console.error('Error fetching daily maintenance schedules:', error);
+    res.status(500).json({
+      message: 'Error fetching daily maintenance schedules',
+      error:   error.message
+    });
+  }
+};
+
+exports.getUpcomingSchedules = async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT *
+         FROM public.maintenance_schedule
+        WHERE lower(frequency) = $1
+           OR ( next_schedule_date 
+                BETWEEN CURRENT_DATE 
+                    AND CURRENT_DATE + INTERVAL '2 days' )
+        ORDER BY next_schedule_date ASC`,
+      ['daily']
+    );
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching upcoming maintenance schedules:', error);
+    res.status(500).json({
+      message: 'Error fetching upcoming maintenance schedules',
+      error: error.message
+    });
+  }
+};
+
+exports.getSchedulesByMachineId = async (req, res) => {
+  const machineId = parseInt(req.params.machineId, 10);
+  if (isNaN(machineId)) {
+    return res.status(400).json({ message: 'Invalid machine_id' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT *
+         FROM public.maintenance_schedule
+        WHERE machine_id = $1
+        ORDER BY maintenance_id ASC`,
+      [machineId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No maintenance schedules found for this machine_id' });
+    }
+
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error(`Error fetching maintenance for machine_id ${machineId}:`, error);
+    res.status(500).json({
+      message: 'Error fetching maintenance schedules by machine_id',
+      error: error.message
+    });
   }
 };

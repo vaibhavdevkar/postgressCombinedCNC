@@ -10,6 +10,8 @@ exports.createPartRejection = async (req, res) => {
       date, updated_at
     } = req.body;
 
+     console.log(req.body)
+
     const result = await pool.query(`
       INSERT INTO partrejection (
         machine_id, plan_id, shift_no,
@@ -27,6 +29,7 @@ exports.createPartRejection = async (req, res) => {
     );
 
     res.status(201).json(result.rows[0]);
+    console.log(result.rows[0])
   } catch (error) {
     res.status(500).json({ message: 'Error creating part rejection', error: error.message });
   }

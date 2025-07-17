@@ -191,3 +191,21 @@ exports.deleteTool = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
+exports.getToolByMachineId = async (req, res) => {
+  const { machine_id } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM public.tool_master WHERE machine_id = $1',
+      [machine_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No tool found for this machine' });
+    }
+    res.json(result.rows); // Return all tools for the given machine
+  } catch (err) {
+    console.error('Error fetching tool by machine_id:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

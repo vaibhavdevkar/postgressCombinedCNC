@@ -1,4 +1,5 @@
 const pool = require('../db');
+const moment = require('moment-timezone');
 
 exports.getAllProductionData = async (req, res) => {
   const { machineType } = req.params;
@@ -283,6 +284,104 @@ exports.getLatestProductionByMachineType = async (req, res) => {
     console.error('Error fetching latest production records:', error);
     return res.status(500).json({
       message: 'Error fetching latest production records',
+      details: error.message
+    });
+  }
+};
+
+
+exports.getAllProductionByMachineTypeHourly = async (req, res) => {
+  try {
+    // 1) Validate machineId
+    const machineId = parseInt(req.params.machineId, 10);
+    if (isNaN(machineId)) {
+      return res.status(400).json({ message: 'Invalid machineId' });
+    }
+
+    // 2) Lookup machine_name_type
+    const { rows: masterRows } = await pool.query(
+      `SELECT machine_name_type
+         FROM public.machine_master
+        WHERE machine_id = $1`,
+      [machineId]
+    );
+    if (masterRows.length === 0) {
+      return res.status(404).json({ message: 'Machine not found' });
+    }
+    const { machine_name_type } = masterRows[0];
+    const tableName = `ORG001_${machine_name_type}_productionData`;
+
+    // 3) Fetch all “Running” records, oldest first
+    const { rows } = await pool.query(
+      `
+      SELECT
+        pd."createdAt" AS ts,
+        pd."TotalPartsProduced"::bigint AS count
+      FROM "${tableName}" pd
+      JOIN public.planentry pe
+        ON pd.plan_id = pe.plan_id
+       AND pe.status = 'Running'
+      WHERE pd.machine_id = $1
+      ORDER BY pd."createdAt" ASC
+      `,
+      [machineId]
+    );
+
+    if (rows.length < 2) {
+      // need at least two points to compute a difference
+      return res.status(200).json([]);
+    }
+
+    // 4) Convert to moment objects in IST
+    const recs = rows.map(r => ({
+      ts: moment(r.ts).tz('Asia/Kolkata'),
+      count: Number(r.count)
+    }));
+
+    const diffs = [];
+    let startIndex = 0;
+
+    // 5) Loop, each time finding the “hour‑later” record
+    while (true) {
+      const startRec = recs[startIndex];
+      const targetTime = startRec.ts.clone().add(1, 'hour');
+
+      // find the last record with ts <= targetTime
+      let candidateIndex = null;
+      for (let j = startIndex + 1; j < recs.length; j++) {
+        if (recs[j].ts.isSameOrBefore(targetTime)) {
+          candidateIndex = j;
+        } else {
+          break;
+        }
+      }
+
+      if (candidateIndex === null) {
+        // no more one‑hour steps available
+        break;
+      }
+
+      const endRec = recs[candidateIndex];
+      diffs.push({
+        from: startRec.ts.format('YYYY-MM-DDTHH:mm:ss'),
+        to:   endRec.ts.format('YYYY-MM-DDTHH:mm:ss'),
+        produced: endRec.count - startRec.count
+      });
+
+      // advance
+      startIndex = candidateIndex;
+
+      // if there's not even enough data to step another hour, exit
+      if (startIndex + 1 >= recs.length) {
+        break;
+      }
+    }
+
+    return res.status(200).json(diffs);
+  } catch (error) {
+    console.error('Error fetching hourly‑sequential production:', error);
+    return res.status(500).json({
+      message: 'Error fetching production data',
       details: error.message
     });
   }
