@@ -40,6 +40,29 @@ router.get('/runningtotalvsecpected', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+router.get('/allproductioncount', async (req, res) => {
+  const sql = `
+    SELECT
+      SUM(o."TotalPartsProduced") AS total_parts_produced
+    FROM planentry p
+    JOIN oee_log o
+      ON p.plan_id    = o.plan_id
+     AND p.machine_id = o.machine_id
+    WHERE p.status IN ('Running', 'Completed')
+      AND o."createdAt" >= date_trunc('day', now())
+  `;
+
+  try {
+    const { rows } = await pool.query(sql);
+    // rows[0].total_parts_produced will be null if no data; coalesce to 0 if you prefer
+    res.json({ total_parts_produced: rows[0].total_parts_produced || 0 });
+  } catch (err) {
+    console.error('Error fetching today’s total production:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 // Create a new OEE log entry
 router.post('/', async (req, res) => {
   const {
@@ -204,7 +227,7 @@ router.get("/currentlasttoday/:machine_id", async (req, res) => {
 })
 
 
-router.get('/getlatestoee/:machineId', async (req, res) => {
+router.get('/getlatestoeebymachineid/:machineId', async (req, res) => {
   const machineId = parseInt(req.params.machineId, 10);
   if (Number.isNaN(machineId)) {
     return res.status(400).json({ error: 'Invalid machineId parameter' });
@@ -233,6 +256,9 @@ router.get('/getlatestoee/:machineId', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+
 
 
 module.exports = router;
