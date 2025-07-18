@@ -1,6 +1,3 @@
-
-
-
 const pool = require('../db');
 
 // Register a machine and create dynamic tables
@@ -19,23 +16,52 @@ exports.registerMachine = async (req, res) => {
     no_of_servo,
     no_of_encoder,
     no_of_batteries,
-    status
+    status,
+    bottleneck        // ← newly added
   } = req.body;
 
   try {
-    // Insert into machine_master
+    // Insert into machine_master (now including bottleneck)
     const result = await pool.query(
       `INSERT INTO machine_master (
-        machine_name_type, make_model, controller_make_model, installed_date, location,
-        ip_address, communication_protocol, tool_count, power_rating,
-        no_of_spindels, no_of_servo, no_of_encoder, no_of_batteries, status
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-      RETURNING *`,
+         machine_name_type,
+         make_model,
+         controller_make_model,
+         installed_date,
+         location,
+         ip_address,
+         communication_protocol,
+         tool_count,
+         power_rating,
+         no_of_spindels,
+         no_of_servo,
+         no_of_encoder,
+         no_of_batteries,
+         status,
+         bottleneck                 -- ← newly added
+       )
+       VALUES (
+         $1,$2,$3,$4,$5,
+         $6,$7,$8,$9,$10,
+         $11,$12,$13,$14,$15     -- ← bumped placeholders
+       )
+       RETURNING *`,
       [
-        machine_name_type, make_model, controller_make_model, installed_date, location,
-        ip_address, communication_protocol, tool_count, power_rating,
-        no_of_spindels, no_of_servo, no_of_encoder, no_of_batteries, status
+        machine_name_type,
+        make_model,
+        controller_make_model,
+        installed_date,
+        location,
+        ip_address,
+        communication_protocol,
+        tool_count,
+        power_rating,
+        no_of_spindels,
+        no_of_servo,
+        no_of_encoder,
+        no_of_batteries,
+        status,
+        bottleneck             // ← value for $15
       ]
     );
 
@@ -141,6 +167,7 @@ exports.getMachineById = async (req, res) => {
 };
 
 // Update machine
+// Update machine
 exports.updateMachine = async (req, res) => {
   const { machineId } = req.params;
   const {
@@ -157,25 +184,48 @@ exports.updateMachine = async (req, res) => {
     no_of_servo,
     no_of_encoder,
     no_of_batteries,
-    status
+    status,
+    bottleneck          // ← newly added
   } = req.body;
 
   try {
     const result = await pool.query(
-      `UPDATE machine_master SET
-        machine_name_type=$1, make_model=$2, controller_make_model=$3,
-        installed_date=$4, location=$5, ip_address=$6, communication_protocol=$7,
-        tool_count=$8, power_rating=$9, no_of_spindels=$10,
-        no_of_servo=$11, no_of_encoder=$12, no_of_batteries=$13, status=$14,
-        updated_at=NOW()
-      WHERE machine_id=$15
-      RETURNING *`,
+      `UPDATE machine_master
+         SET machine_name_type         = $1,
+             make_model                = $2,
+             controller_make_model     = $3,
+             installed_date           = $4,
+             location                 = $5,
+             ip_address               = $6,
+             communication_protocol   = $7,
+             tool_count               = $8,
+             power_rating             = $9,
+             no_of_spindels           = $10,
+             no_of_servo              = $11,
+             no_of_encoder            = $12,
+             no_of_batteries          = $13,
+             status                   = $14,
+             bottleneck               = $15,
+             updated_at               = NOW()
+       WHERE machine_id = $16
+       RETURNING *`,
       [
-        machine_name_type, make_model, controller_make_model,
-        installed_date, location, ip_address, communication_protocol,
-        tool_count, power_rating, no_of_spindels,
-        no_of_servo, no_of_encoder, no_of_batteries, status,
-        machineId
+        machine_name_type,
+        make_model,
+        controller_make_model,
+        installed_date,
+        location,
+        ip_address,
+        communication_protocol,
+        tool_count,
+        power_rating,
+        no_of_spindels,
+        no_of_servo,
+        no_of_encoder,
+        no_of_batteries,
+        status,
+        bottleneck,    // ← value for $15
+        machineId      // ← value for $16
       ]
     );
 
@@ -183,8 +233,12 @@ exports.updateMachine = async (req, res) => {
       return res.status(404).json({ error: 'Machine not found' });
     }
 
-    res.status(200).json({ message: 'Machine updated successfully', machine: result.rows[0] });
+    res.status(200).json({
+      message: 'Machine updated successfully',
+      machine: result.rows[0]
+    });
   } catch (error) {
+    console.error("Error in updateMachine:", error);
     res.status(500).json({ message: 'Error updating machine', details: error.message });
   }
 };
@@ -305,3 +359,25 @@ exports.getMachinesByLine = async (req, res) => {
     });
   }
 }
+
+
+exports.getBottleneckMachineIds = async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT machine_id
+         FROM machine_master
+        WHERE bottleneck = $1
+        ORDER BY machine_id ASC`,
+      ['bottleneck']
+    );
+    // map the rows to an array of ints
+    const ids = rows.map(r => r.machine_id);
+    return res.status(200).json(ids);
+  } catch (error) {
+    console.error('Error fetching bottleneck machine IDs:', error);
+    return res.status(500).json({
+      message: 'Error fetching bottleneck machine IDs',
+      details: error.message
+    });
+  }
+};

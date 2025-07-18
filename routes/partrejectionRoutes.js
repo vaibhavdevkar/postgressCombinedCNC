@@ -3,6 +3,8 @@ const router = express.Router();
 const partRejectionController = require('../controller/partrejectionController');
 
 // CREATE
+router.get('/today/:machineId', partRejectionController.getTodayPartRejectionsByMachine);
+
 router.post('/', partRejectionController.createPartRejection);
 
 // READ ALL

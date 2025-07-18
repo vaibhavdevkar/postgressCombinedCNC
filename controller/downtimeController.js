@@ -148,3 +148,28 @@ exports.getDowntimeByMachine = async (req, res) => {
       .json({ message: 'Error fetching downtime records', details: err.message });
   }
 };
+
+
+exports.getDowntimeByMachinebyRunning = async (req, res) => {
+  const { machineId } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT d.*
+         FROM downtime AS d
+         JOIN planentry AS p
+           ON d.plan_id = p.plan_id
+        WHERE p.machine_id = $1
+        ORDER BY d.id DESC`,
+      [machineId]
+    );
+
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching downtime for machine via planentry:', error);
+    return res.status(500).json({
+      message: 'Error fetching downtime records',
+      details: error.message
+    });
+  }
+};

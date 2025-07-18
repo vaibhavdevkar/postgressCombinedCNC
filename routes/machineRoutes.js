@@ -8,11 +8,13 @@ const machineController = require('../controller/machineController');
 router.get('/getallmachine', machineController.getAllMachine);
 router.post('/register', machineController.registerMachine);
 
+router.get('/bottleneck', machineController.getBottleneckMachineIds);
 
 // get machines by location , location is reference to the line master
 router.get('/location', machineController.getMachinesByLine);
 
 // Read
+
 router.get('/getallmachineids', machineController.getAllMachineIds);
 router.get('/active-count', machineController.getActiveMachinesCount);
 router.get('/inactive-count', machineController.getInActiveMachinesCount);

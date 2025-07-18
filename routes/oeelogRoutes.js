@@ -259,6 +259,91 @@ router.get('/getlatestoeebymachineid/:machineId', async (req, res) => {
 
 
 
+router.get('/allproductioncount', async (req, res) => {
+  const sql = `
+    SELECT
+      SUM(o."TotalPartsProduced") AS total_parts_produced
+    FROM planentry p
+    JOIN oee_log o
+      ON p.plan_id    = o.plan_id
+     AND p.machine_id = o.machine_id
+    WHERE p.status IN ('Running', 'Completed')
+      AND o."createdAt" >= date_trunc('day', now())
+  `;
+
+  try {
+    const { rows } = await pool.query(sql);
+    // rows[0].total_parts_produced will be null if no data; coalesce to 0 if you prefer
+    res.json({ total_parts_produced: rows[0].total_parts_produced || 0 });
+  } catch (err) {
+    console.error('Error fetching today’s total production:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+router.get('/bottleneck/last7days', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT 
+         o.machine_id,
+         o.availability,
+         o.performance,
+         o.quality,
+         o.shift_no,
+         o."OEE"
+       FROM oee_log AS o
+       JOIN machine_master AS m
+         ON o.machine_id = m.machine_id
+       WHERE m.bottleneck   = $1
+         AND o."createdAt" >= NOW() - INTERVAL '7 days'
+       ORDER BY o."createdAt" DESC`,
+      ['bottleneck']
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching bottleneck OEE logs:', error);
+    return res.status(500).json({
+      message: 'Error fetching bottleneck OEE logs',
+      details: error.message
+    });
+  }
+});
+
+
+router.get('/bottleneck/today/latest', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT 
+         o.machine_id,
+         o.availability,
+         o.performance,
+         o.quality,
+         o.shift_no,
+          o."createdAt",
+         o."OEE"
+       FROM oee_log AS o
+       JOIN machine_master AS m
+         ON o.machine_id = m.machine_id
+       WHERE m.bottleneck   = $1
+         AND o."createdAt" >= date_trunc('day', NOW())
+       ORDER BY o."createdAt" DESC
+       LIMIT 1`,
+      ['bottleneck']
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No OEE record found for today.' });
+    }
+    return res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching today’s latest bottleneck OEE record:', error);
+    return res.status(500).json({
+      message: 'Error fetching today’s latest bottleneck OEE record',
+      details: error.message
+    });
+  }
+});
 
 
 module.exports = router;

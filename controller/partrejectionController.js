@@ -100,3 +100,26 @@ exports.deletePartRejection = async (req, res) => {
     res.status(500).json({ message: 'Error deleting part rejection', error: error.message });
   }
 };
+
+
+exports.getTodayPartRejectionsByMachine = async (req, res) => {
+  const { machineId } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT *
+         FROM partrejection
+        WHERE date = CURRENT_DATE
+          AND machine_id = $1
+        ORDER BY date DESC`,
+      [machineId]
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching today’s part rejections by machine:', error);
+    return res.status(500).json({
+      message: 'Error fetching today’s part rejections',
+      details: error.message
+    });
+  }
+};
