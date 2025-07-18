@@ -76,3 +76,27 @@ exports.getTodayBottleneckMachineStatus = async (req, res) => {
     });
   }
 };
+
+
+exports.getMachineStatusTodayByMachine = async (req, res) => {
+  const { machineId } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT *
+         FROM public.machine_status
+        WHERE machine_id   = $1
+          AND created_at  >= date_trunc('day', NOW())
+          AND created_at  <  date_trunc('day', NOW()) + INTERVAL '1 day'
+        ORDER BY id DESC`,
+      [machineId]
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching today’s status for machine:', error);
+    return res.status(500).json({
+      message: 'Error fetching today’s machine status',
+      details: error.message
+    });
+  }
+};
