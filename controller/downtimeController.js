@@ -33,12 +33,35 @@ const pool = require('../db');
 // };
 
 // READ ALL
+// exports.getAllDowntimes = async (req, res) => {
+//   try {
+//     const result = await pool.query('SELECT * FROM downtime ORDER BY start_timestamp DESC');
+//     res.json(result.rows);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error fetching downtimes', error: error.message });
+//   }
+// };
+
 exports.getAllDowntimes = async (req, res) => {
+  const sql = `
+    SELECT
+      dt.*,
+      mm.machine_name_type
+    FROM public.downtime AS dt
+    LEFT JOIN public.machine_master AS mm
+      ON dt.machine_id = mm.machine_id
+    ORDER BY dt.start_timestamp DESC
+  `;
+
   try {
-    const result = await pool.query('SELECT * FROM downtime ORDER BY start_timestamp DESC');
+    const result = await pool.query(sql);
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching downtimes', error: error.message });
+    console.error('Error fetching downtimes with machine names', error);
+    res.status(500).json({
+      message: 'Error fetching downtimes',
+      error: error.message
+    });
   }
 };
 

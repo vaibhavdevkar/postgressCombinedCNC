@@ -368,5 +368,82 @@ router.get('/bottleneck/today/latest', async (req, res) => {
 
 
 
+router.get('/productionreport/:machine_id', async (req, res) => {
+  const machineId = parseInt(req.params.machine_id, 10);
+  const period    = (req.query.period || 'currentday').toLowerCase();
+
+  const PERIOD_QUERIES = {
+    currentday: `
+      SELECT
+        shift_no,
+        COALESCE(SUM("TotalPartsProduced"), 0) AS "totalPartsProduced",
+        COALESCE(SUM("expectedPartCount"),  0) AS "expectedPartCount",
+        COALESCE(SUM("defectiveParts"),      0) AS "defectiveParts"
+      FROM oee_log
+      WHERE machine_id = $1
+        AND "createdAt" >= date_trunc('day', now())
+      GROUP BY shift_no
+      ORDER BY shift_no
+    `,
+    lastday: `
+      SELECT
+        shift_no,
+        COALESCE(SUM("TotalPartsProduced"), 0) AS "totalPartsProduced",
+        COALESCE(SUM("expectedPartCount"),  0) AS "expectedPartCount",
+        COALESCE(SUM("defectiveParts"),      0) AS "defectiveParts"
+      FROM oee_log
+      WHERE machine_id = $1
+        AND "createdAt" >= date_trunc('day', now() - interval '1 day')
+        AND "createdAt" <  date_trunc('day', now())
+      GROUP BY shift_no
+      ORDER BY shift_no
+    `,
+    '1month': `
+      SELECT
+        shift_no,
+        COALESCE(SUM("TotalPartsProduced"), 0) AS "totalPartsProduced",
+        COALESCE(SUM("expectedPartCount"),  0) AS "expectedPartCount",
+        COALESCE(SUM("defectiveParts"),      0) AS "defectiveParts"
+      FROM oee_log
+      WHERE machine_id = $1
+        AND "createdAt" >= date_trunc('month', now())
+      GROUP BY shift_no
+      ORDER BY shift_no
+    `,
+    '6month': `
+      SELECT
+        shift_no,
+        COALESCE(SUM("TotalPartsProduced"), 0) AS "totalPartsProduced",
+        COALESCE(SUM("expectedPartCount"),  0) AS "expectedPartCount",
+        COALESCE(SUM("defectiveParts"),      0) AS "defectiveParts"
+      FROM oee_log
+      WHERE machine_id = $1
+        AND "createdAt" >= now() - interval '6 months'
+      GROUP BY shift_no
+      ORDER BY shift_no
+    `
+  };
+
+  const sql = PERIOD_QUERIES[period];
+  if (!sql) {
+    return res.status(400).json({
+      error: `Invalid period; use one of: ${Object.keys(PERIOD_QUERIES).join(', ')}`
+    });
+  }
+
+  try {
+    const { rows } = await pool.query(sql, [machineId]);
+
+    // rows is an array of { shift_no, totalPartsProduced, expectedPartCount, defectiveParts }
+    res.json({
+      period,
+      machineId,
+      data: rows
+    });
+  } catch (err) {
+    console.error('Error fetching production report:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 module.exports = router;
