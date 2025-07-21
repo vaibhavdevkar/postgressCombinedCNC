@@ -123,3 +123,20 @@ exports.getTodayPartRejectionsByMachine = async (req, res) => {
     });
   }
 };
+
+
+exports.getPartRejectionsByMachine = async (req, res) => {
+  const { machineId } = req.params;                     // 1️⃣ grab from /:machineId
+  try {
+    const result = await pool.query(
+      `SELECT *
+         FROM partrejection
+        WHERE machine_id = $1
+     ORDER BY date DESC`,
+      [machineId]                                       // 2️⃣ parameterize!
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching part rejections', error: error.message });
+  }
+};

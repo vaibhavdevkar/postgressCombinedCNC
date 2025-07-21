@@ -5,6 +5,8 @@ const partRejectionController = require('../controller/partrejectionController')
 // CREATE
 router.get('/today/:machineId', partRejectionController.getTodayPartRejectionsByMachine);
 
+router.get('/bymachineid/:machineId', partRejectionController.getPartRejectionsByMachine);
+
 router.post('/', partRejectionController.createPartRejection);
 
 // READ ALL

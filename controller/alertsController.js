@@ -91,3 +91,48 @@ exports.getAlertById = async (req, res) => {
 //     res.status(500).json({ error: "Internal Server Error" });
 //   }
 // };
+
+
+exports.getAllAlerts1 = async (req, res) => {
+  const sql = `
+    SELECT *
+    FROM public.alerts_1
+    ORDER BY triggered_at DESC
+  `;
+  try {
+    const { rows } = await pool.query(sql);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching alerts:', err);
+    res.status(500).json({
+      message: 'Error fetching alerts',
+      error: err.message
+    });
+  }
+};
+
+
+exports.getAlertsByMachine = async (req, res) => {
+  const { machineId } = req.params;        // 1️⃣ pull from /:machineId
+  const sql = `
+    SELECT *
+      FROM public.alerts_1
+     WHERE machine_id = $1
+  ORDER BY triggered_at DESC
+  `;
+  try {
+    const { rows } = await pool.query(sql, [machineId]);
+    if (rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: `No alerts found for machine ${machineId}` });
+    }
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching alerts:', err);
+    res.status(500).json({
+      message: 'Error fetching alerts',
+      error: err.message,
+    });
+  }
+};

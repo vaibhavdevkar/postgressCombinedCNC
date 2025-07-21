@@ -446,4 +446,26 @@ router.get('/productionreport/:machine_id', async (req, res) => {
   }
 });
 
+router.get('/bymachineid/:machine_id', async (req, res) => {
+  const machineId = parseInt(req.params.machine_id, 10);
+  if (isNaN(machineId)) {
+    return res.status(400).json({ error: 'machine_id must be a number' });
+  }
+
+  const sql = `
+    SELECT *
+    FROM oee_log
+    WHERE machine_id = $1
+    ORDER BY id DESC;
+  `;
+
+  try {
+    const { rows } = await pool.query(sql, [machineId]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching OEE logs for machine', machineId, err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

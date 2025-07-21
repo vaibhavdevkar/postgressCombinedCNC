@@ -224,7 +224,7 @@ exports.getToolsByMachine = async (req, res) => {
       tm.alert_threshold,
       tm.machine_id,
       mm.machine_name_type,
-      tm.tool_usage_counter,
+      tm.tool_usage_counter
     FROM public.tool_master AS tm
     INNER JOIN public.tool_log    AS tl
       ON tm.tool_id = tl.tool_id
@@ -245,3 +245,33 @@ exports.getToolsByMachine = async (req, res) => {
     });
   }
 };
+
+
+// exports.getToolByMachineIdfortoolLife = async (req, res) => {
+//   const { machine_id } = req.params;
+//   try {
+//     const result = await pool.query(
+//       `SELECT
+//          machine_id,
+//          tool_number,
+//          tool_life_limit,
+//          tool_usage_counter,
+//          tool_change_threshold
+//        FROM public.tool_master
+//        WHERE machine_id = $1`,
+//       [machine_id]
+//     );
+
+//     if (result.rows.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ error: 'No tool found for this machine' });
+//     }
+
+//     // result.rows is an array of objects, each containing only the five fields
+//     res.json(result.rows);
+//   } catch (err) {
+//     console.error('Error fetching tool by machine_id:', err);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };

@@ -4,7 +4,7 @@ const downtimeController = require('../controller/downtimeController');
 
 router.get('/byrunningplaniddowntime/:machineId', downtimeController.getDowntimeByMachinebyRunning);
 
-router.get('/downtime/:machine_id', downtimeController.getDowntimeByMachine);
+router.get('/bymachineid/:machine_id', downtimeController.getDowntimeByMachine);
 
 
 // READ ALL
