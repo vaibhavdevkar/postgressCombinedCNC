@@ -209,3 +209,39 @@ exports.getToolByMachineId = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
+// controllers/toolController.js
+exports.getToolsByMachine = async (req, res) => {
+  const { machineId } = req.params;
+
+  const sql = `
+    SELECT
+      tm.tool_id,
+      tm.tool_name,
+      tm.tool_number,
+      tm.tool_life_limit,
+      tm.alert_threshold,
+      tm.machine_id,
+      mm.machine_name_type,
+      tm.tool_usage_counter,
+    FROM public.tool_master AS tm
+    INNER JOIN public.tool_log    AS tl
+      ON tm.tool_id = tl.tool_id
+    INNER JOIN public.machine_master AS mm
+      ON tm.machine_id = mm.machine_id
+    WHERE tm.machine_id = $1
+    ORDER BY tm.tool_id ASC
+  `;
+
+  try {
+    const result = await pool.query(sql, [machineId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching tools for machine', machineId, err);
+    res.status(500).json({
+      message: 'Error fetching tool data',
+      error: err.message
+    });
+  }
+};

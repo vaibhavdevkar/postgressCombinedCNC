@@ -89,3 +89,27 @@ exports.getAllMonitoringData = async (req, res) => {
     res.status(500).json({ message: 'Error fetching data', error: err.message });
   }
 };
+
+
+exports.getLatestMonitoringData = async (req, res) => {
+  const { machineType } = req.params;
+  const tableName = `ORG001_${machineType}_MonitoringDataLog`;
+
+  try {
+    // Grab the latest 16 entries
+    const sql = `
+      SELECT *
+      FROM "${tableName}"
+      ORDER BY "createdAt" DESC
+      LIMIT 14
+    `;
+    const result = await pool.query(sql);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching latest monitoring data:', error);
+    res.status(500).json({
+      message: 'Error fetching latest monitoring data',
+      error: error.message
+    });
+  }
+};

@@ -34,4 +34,6 @@ router.delete('/:id', toolController.deleteTool);
 
 router.get('/getToolByMachine/:machine_id', toolController.getToolByMachineId);
 
+router.get('/withlog/:machineId', toolController.getToolsByMachine);
+
 module.exports = router;

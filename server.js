@@ -52,8 +52,8 @@ app.use('/api/users', userRoutes);
 
 // const oeeRoutes = require('./routes/oeelogRoutes');
 // app.use('/api/save', oeeRoutes);
-const { startGlobalOeePoller } = require('./controller/oeelogController')
-startGlobalOeePoller()
+// const { startGlobalOeePoller } = require('./controller/oeelogController')
+// startGlobalOeePoller()
 
 
 const planentryRoutes = require('./routes/planEntryRoutes');

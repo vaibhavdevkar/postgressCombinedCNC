@@ -63,6 +63,26 @@ router.get('/allproductioncount', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+router.get('/forProductionchart', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        machine_id,
+        "TotalPartsProduced",
+        "expectedPartCount",
+        "shift_no",
+        "createdAt"
+      FROM oee_log
+      ORDER BY id DESC;
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching OEE logs:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Create a new OEE log entry
 router.post('/', async (req, res) => {
   const {
@@ -195,8 +215,8 @@ router.delete('/:id', async (req, res) => {
 
 
 router.get("/currentlasttoday/:machine_id", async (req, res) => {
-  const { machine_id } = req.params;
-
+  // const { machine_id } = req.params;
+const machine_id = parseInt(req.params.machine_id, 10);
   const sql = `
     SELECT
       COALESCE(SUM("TotalPartsProduced") FILTER (
@@ -291,7 +311,8 @@ router.get('/bottleneck/last7days', async (req, res) => {
          o.performance,
          o.quality,
          o.shift_no,
-         o."OEE"
+         o."OEE",
+         o."createdAt"
        FROM oee_log AS o
        JOIN machine_master AS m
          ON o.machine_id = m.machine_id
@@ -344,6 +365,8 @@ router.get('/bottleneck/today/latest', async (req, res) => {
     });
   }
 });
+
+
 
 
 module.exports = router;
