@@ -36,12 +36,35 @@ exports.createPartRejection = async (req, res) => {
 };
 
 // READ ALL
+// exports.getAllPartRejections = async (req, res) => {
+//   try {
+//     const result = await pool.query('SELECT * FROM partrejection ORDER BY date DESC');
+//     res.json(result.rows);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error fetching part rejections', error: error.message });
+//   }
+// };
+
 exports.getAllPartRejections = async (req, res) => {
+  const sql = `
+    SELECT
+      r.*,
+      m.machine_name_type
+    FROM partrejection r
+    JOIN machine_master m
+      ON r.machine_id = m.machine_id
+    ORDER BY r.date DESC;
+  `;
+
   try {
-    const result = await pool.query('SELECT * FROM partrejection ORDER BY date DESC');
-    res.json(result.rows);
+    const { rows } = await pool.query(sql);
+    res.json(rows);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching part rejections', error: error.message });
+    console.error('Error fetching all part rejections:', error);
+    res.status(500).json({
+      message: 'Error fetching part rejections',
+      error: error.message
+    });
   }
 };
 

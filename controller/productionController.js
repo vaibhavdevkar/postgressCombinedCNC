@@ -386,3 +386,88 @@ exports.getAllProductionByMachineTypeHourly = async (req, res) => {
     });
   }
 };
+
+// exports.getAvgCycleTimeLast7Days = async (req, res) => {
+//   const { machineType } = req.params;
+//   const tableName = `ORG001_${machineType}_productionData`;
+
+//   const query = `
+//     SELECT
+//       DATE_TRUNC('day', h."createdAt")::date     AS day,
+//       h."plan_id",
+//       pe.part_id,
+//       ROUND(AVG(h."production_CycleTime")::numeric, 2) AS avgCycleTime
+//     FROM "${tableName}" AS h
+//     JOIN public.planentry AS pe
+//       ON h."plan_id" = pe.plan_id
+//     WHERE h."createdAt" >= NOW() - INTERVAL '7 days'
+//     GROUP BY day, h."plan_id", pe.part_id
+//     ORDER BY day DESC, h."plan_id";
+//   `;
+
+//   try {
+//     const { rows } = await pool.query(query);
+//     res.json(rows);
+//   } catch (err) {
+//     console.error('Error fetching 7‑day avg cycle times with part_id:', err);
+//     res.status(500).json({
+//       message: 'Failed to fetch average cycle times for the last 7 days',
+//       error: err.message
+//     });
+//   }
+// };
+
+
+// controllers/productionDataController.js
+
+
+
+exports.getAvgCycleTimeLast7Days = async (req, res) => {
+  try {
+    // 1. Find the bottleneck machine by matching the column value
+    const bottleneckQ = `
+      SELECT machine_name_type
+      FROM public.machine_master
+      WHERE bottleneck = 'bottleneck'
+      LIMIT 1;
+    `;
+    const bottleneckRes = await pool.query(bottleneckQ);
+
+    if (bottleneckRes.rows.length === 0) {
+      return res.status(404).json({ message: 'No bottleneck machine found' });
+    }
+
+    const machineType = bottleneckRes.rows[0].machine_name_type;
+    const tableName = `ORG001_${machineType}_productionData`;
+
+    // 2. Aggregate the last‑7‑day averages
+    const dataQ = `
+      SELECT
+        DATE_TRUNC('day', h."createdAt")::date      AS day,
+        h."plan_id",
+        pe.part_id,
+        pm."cycle_time"                            AS processCycleTime,
+        ROUND(AVG(h."production_CycleTime")::numeric, 2) AS avgCycleTime
+      FROM "${tableName}" AS h
+      INNER JOIN public.planentry       AS pe
+        ON h."plan_id" = pe.plan_id
+      INNER JOIN public.process_master AS pm
+        ON pe.part_id = pm.part_id
+      WHERE h."createdAt" >= NOW() - INTERVAL '7 days'
+      GROUP BY day, h."plan_id", pe.part_id, pm."cycle_time"
+      ORDER BY day DESC, h."plan_id";
+    `;
+
+    const { rows } = await pool.query(dataQ);
+    res.json({
+      machineType,
+      data: rows
+    });
+  } catch (err) {
+    console.error('Error in getAvgCycleTimeLast7Days:', err);
+    res.status(500).json({
+      message: 'Failed to fetch average cycle times',
+      error: err.message
+    });
+  }
+};

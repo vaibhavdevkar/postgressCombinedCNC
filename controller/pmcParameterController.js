@@ -204,16 +204,35 @@ exports.createPmcParameter = async (req, res) => {
 };
 
 // READ ALL
+// exports.getAllPmcParameters = async (_, res) => {
+//   try {
+//     const { rows } = await pool.query(
+//       `SELECT *
+//          FROM pmc_parameter_master
+//         ORDER BY pmc_parameter_id;`
+//     );
+//     res.json(rows);
+//   } catch (err) {
+//     console.error('Error fetching PMC parameters:', err);
+//     res.status(500).json({ message: 'Database error.' });
+//   }
+// };
+
 exports.getAllPmcParameters = async (_, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT *
-         FROM pmc_parameter_master
-        ORDER BY pmc_parameter_id;`
-    );
+    const query = `
+      SELECT
+        pm.*,
+        m.machine_name_type
+      FROM pmc_parameter_master AS pm
+      LEFT JOIN machine_master AS m
+        ON pm.machine_id = m.machine_id
+      ORDER BY pm.pmc_parameter_id;
+    `;
+    const { rows } = await pool.query(query);
     res.json(rows);
   } catch (err) {
-    console.error('Error fetching PMC parameters:', err);
+    console.error('Error fetching PMC parameters with machine names:', err);
     res.status(500).json({ message: 'Database error.' });
   }
 };
@@ -321,5 +340,35 @@ exports.deletePmcParameter = async (req, res) => {
   } catch (err) {
     console.error('Error deleting PMC parameter:', err);
     res.status(500).json({ message: 'Database error.' });
+  }
+};
+
+
+
+exports.getPmcParametersByMachine = async (req, res) => {
+  const { machine_id } = req.params;    // pulled from /:machine_id
+  const sql = `
+    SELECT *
+      FROM public.pmc_parameter_master
+     WHERE machine_id = $1
+  ORDER BY parameter_name;             
+  `;
+
+  try {
+    const { rows } = await pool.query(sql, [machine_id]);
+
+    if (rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: `No PMC parameters found for machine ${machine_id}` });
+    }
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching PMC parameters:', err);
+    res.status(500).json({
+      message: 'Error fetching PMC parameters',
+      error: err.message
+    });
   }
 };

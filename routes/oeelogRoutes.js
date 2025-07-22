@@ -64,26 +64,56 @@ router.get('/allproductioncount', async (req, res) => {
   }
 });
 
+// router.get('/forProductionchart', async (req, res) => {
+//   try {
+//     const { rows } = await pool.query(`
+//       SELECT
+//         machine_id,
+//         "TotalPartsProduced",
+//         "expectedPartCount",
+//         "downtimeDuration",
+//         "defectiveParts",
+//         "shift_no",
+//         "createdAt"
+//       FROM oee_log
+//       ORDER BY id DESC;
+//     `);
+//     res.json(rows);
+//   } catch (err) {
+//     console.error('Error fetching OEE logs:', err);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
+
+// Create a new OEE log entry
 router.get('/forProductionchart', async (req, res) => {
+  const sql = `
+    SELECT
+      o.machine_id,
+      m.machine_name_type,
+      o."TotalPartsProduced",
+      o."expectedPartCount",
+      o."downtimeDuration",
+      o."defectiveParts",
+      o.shift_no,
+      o."createdAt"
+    FROM oee_log o
+    JOIN machine_master m
+      ON o.machine_id = m.machine_id
+    ORDER BY o.id DESC;
+  `;
+
   try {
-    const { rows } = await pool.query(`
-      SELECT
-        machine_id,
-        "TotalPartsProduced",
-        "expectedPartCount",
-        "shift_no",
-        "createdAt"
-      FROM oee_log
-      ORDER BY id DESC;
-    `);
+    const { rows } = await pool.query(sql);
     res.json(rows);
   } catch (err) {
-    console.error('Error fetching OEE logs:', err);
+    console.error('Error fetching OEE logs for production chart:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Create a new OEE log entry
+
+
 router.post('/', async (req, res) => {
   const {
     machine_id, shift_no, plan_id, part_name, machine_name_type,

@@ -5,7 +5,7 @@ const pool  = require('../db');  // your configured pg Pool instance
 // API endpoints
 const MACHINES_API = 'http://localhost:5003/api/machines/allactivecount';
 const PLAN_API     = 'http://localhost:5003/api/planentries/running';
-const OEE_LIVE_API = 'http://192.168.1.11:5003/api/oee/live';
+const OEE_LIVE_API = 'http://192.168.1.9:5003/api/oee/live';
 
 async function iterateAll() {
   try {
