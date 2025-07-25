@@ -52,8 +52,8 @@ app.use('/api/users', userRoutes);
 
 // const oeeRoutes = require('./routes/oeelogRoutes');
 // app.use('/api/save', oeeRoutes);
-// const { startGlobalOeePoller } = require('./controller/oeelogController')
-// startGlobalOeePoller()
+const { startGlobalOeePoller } = require('./controller/oeelogController')
+startGlobalOeePoller()
 
 
 const planentryRoutes = require('./routes/planEntryRoutes');
@@ -78,6 +78,25 @@ app.use('/api/processes', processRoutes);
 app.use('/api/shifts', shiftRoutes)
 app.use('/api/pmc-parameters', pmcparameterRoutes);
 app.use('/api/documents', documentRoutes);
+
+
+const oeeCalculate  = require("./controller/oeeCalculate")
+const averageData = require("./routes/averageDataRoute")
+
+//mayuri 
+ app.use('/api/oee/getRunningOEE', oeeCalculate);
+app.use('/api/machine-average-data',averageData)
+
+// karan 
+
+const { handlePlanEntryForShifts } = require('./controller/partEntryLogFunction');
+handlePlanEntryForShifts();
+
+const {logDowntimeForAllRunningMachines}  = require("./controller/downtimeLogger")
+
+    setInterval(() => {
+      logDowntimeForAllRunningMachines();
+    }, 1 * 60 * 1000); // every 1 minutes
 
 const PORT = process.env.PORT || 5003;
 app.listen(PORT, () => {

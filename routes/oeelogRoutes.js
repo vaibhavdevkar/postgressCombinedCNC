@@ -244,9 +244,51 @@ router.delete('/:id', async (req, res) => {
 
 
 
+// router.get("/currentlasttoday/:machine_id", async (req, res) => {
+//   // const { machine_id } = req.params;
+// const machine_id = parseInt(req.params.machine_id, 10);
+//   const sql = `
+//     SELECT
+//       COALESCE(SUM("TotalPartsProduced") FILTER (
+//         WHERE "createdAt" >= date_trunc('day', now())
+//       ), 0) AS currentDayTotalPartsProduced,
+//       COALESCE(SUM("TotalPartsProduced") FILTER (
+//         WHERE "createdAt" >= date_trunc('day', now() - interval '1 day')
+//           AND "createdAt" <  date_trunc('day', now())
+//       ), 0) AS lastDayTotalPartsProduced,
+//       COALESCE(SUM("TotalPartsProduced") FILTER (
+//         WHERE "createdAt" >= date_trunc('month', now())
+//       ), 0) AS currentMonthTotalPartsProduced,
+//       COALESCE(SUM("TotalPartsProduced") FILTER (
+//         WHERE "createdAt" >= date_trunc('month', now() - interval '1 month')
+//           AND "createdAt" <  date_trunc('month', now())
+//       ), 0) AS lastMonthTotalPartsProduced
+//     FROM oee_log
+//     WHERE machine_id = $1;
+//   `;
+
+//   try {
+//     const { rows } = await pool.query(sql, [machine_id]);
+//     res.json(rows[0]);
+//   } catch (err) {
+//     console.error('Error fetching production stats:', err);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// })
+
+
 router.get("/currentlasttoday/:machine_id", async (req, res) => {
-  // const { machine_id } = req.params;
-const machine_id = parseInt(req.params.machine_id, 10);
+  const rawId = req.params.machine_id;
+  const machine_id = parseInt(rawId, 10);
+
+  // 1️⃣ Validate machine_id
+  if (Number.isNaN(machine_id)) {
+    return res
+      .status(400)
+      .json({ error: `Invalid machine_id (“${rawId}”) – must be an integer` });
+  }
+
+  // 2️⃣ Your aggregation query
   const sql = `
     SELECT
       COALESCE(SUM("TotalPartsProduced") FILTER (
@@ -269,12 +311,15 @@ const machine_id = parseInt(req.params.machine_id, 10);
 
   try {
     const { rows } = await pool.query(sql, [machine_id]);
-    res.json(rows[0]);
+    return res.json(rows[0]);
   } catch (err) {
     console.error('Error fetching production stats:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    // You could also catch specific Postgres codes here if needed:
+    // if (err.code === '42P01') { … }
+    return res.status(500).json({ error: 'Internal server error' });
   }
-})
+});
+
 
 
 router.get('/getlatestoeebymachineid/:machineId', async (req, res) => {

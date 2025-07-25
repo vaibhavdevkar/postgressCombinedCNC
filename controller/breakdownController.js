@@ -30,12 +30,35 @@ exports.createBreakdown = async (req, res) => {
 };
 
 // READ ALL
+// exports.getAllBreakdowns = async (req, res) => {
+//   try {
+//     const result = await pool.query('SELECT * FROM breakdown ORDER BY date DESC');
+//     res.json(result.rows);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error fetching breakdowns', error: error.message });
+//   }
+// };
+
 exports.getAllBreakdowns = async (req, res) => {
+  const sql = `
+    SELECT
+      b.*, 
+      m.machine_name_type
+    FROM breakdown AS b
+    JOIN machine_master AS m
+      ON b.machine_id = m.machine_id
+    ORDER BY b.date DESC;
+  `;
+
   try {
-    const result = await pool.query('SELECT * FROM breakdown ORDER BY date DESC');
-    res.json(result.rows);
+    const { rows } = await pool.query(sql);
+    res.json(rows);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching breakdowns', error: error.message });
+    console.error('Error fetching breakdowns:', error);
+    res.status(500).json({
+      message: 'Error fetching breakdowns',
+      error: error.message
+    });
   }
 };
 
